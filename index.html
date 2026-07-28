@@ -152,7 +152,7 @@
             <i class="fa-solid fa-link text-blue-600"></i> Google Sheet API 網址設定
         </h3>
         <p class="text-xs text-slate-500 mb-4">請將您在 Google Apps Script 部署獲得的 Web App URL 貼至下方：</p>
-        <input type="url" id="gasUrlInput" value="https://script.google.com/macros/s/AKfycbzAJ289K75oI9gtQxCBRBcfwMwZhgxhOnDgtKNCXWeJRLf7DRhedGh2gvsNtOeCRdMZ/exec"w-full text-xs p-3 border border-slate-300 rounded-xl mb-4 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        <input type="url" id="gasUrlInput" class="w-full text-xs p-3 border border-slate-300 rounded-xl mb-4 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="https://script.google.com/macros/s/.../exec">
         <div class="flex gap-2">
             <button onclick="closeSettings()" class="flex-1 bg-slate-100 text-slate-600 font-bold py-2 rounded-xl text-xs">取消</button>
             <button onclick="saveSettings()" class="flex-1 bg-blue-600 text-white font-bold py-2 rounded-xl text-xs">儲存網址</button>
@@ -167,6 +167,9 @@
 </div>
 
 <script>
+    // 預設 API 網址（當未設定 localStorage 時自動使用）
+    const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbzAJ289K75oI9gtQxCBRBcfwMwZhgxhOnDgtKNCXWeJRLf7DRhedGh2gvsNtOeCRdMZ/exec";
+
     // 品項定義
     const items = {
         clear: ["奧澈日拋", "舒視能日拋"],
@@ -416,54 +419,12 @@
             return;
         }
 
-        const ecp = document.getElementById('ecpName').value.trim();
-        const contact = document.getElementById('contactPerson').value.trim();
-
-        if (!ecp || !contact) {
-            showToast('⚠️ 請完整填寫姓名與店名');
-            return;
-        }
-
-        let text = `【隱形眼鏡試戴訂貨單】\n`;
-        text += `姓名：${ecp}\n`;
-        text += `店名：${contact}\n`;
-        text += `------------------------\n`;
-
-        let sortedData = [...orders].sort((a, b) => {
-            if (a.typeKey !== b.typeKey) return typeOrder.indexOf(a.typeKey) - typeOrder.indexOf(b.typeKey);
-            if (a.prod !== b.prod) return a.prod.localeCompare(b.prod, 'zh-Hant');
-            return (parseFloat(a.deg) || 0) - (parseFloat(b.deg) || 0);
-        });
-
-        let lastType = "", lastProd = "";
-        sortedData.forEach(i => {
-            if (i.typeKey !== lastType) {
-                text += `\n${i.typeName}\n`;
-                lastType = i.typeKey;
-            }
-            if (i.prod !== lastProd) {
-                text += `● 品項：${i.prod}\n`;
-                lastProd = i.prod;
-            }
-            text += `  度數：${i.deg} → ${i.qty} ${i.unit}\n`;
-        });
-
-        // 複製至剪貼簿 (使用相容 fallback)
-        const textarea = document.createElement('textarea');
-        textarea.value = text;
-        document.body.appendChild(textarea);
-        textarea.select();
-        try {
-            document.execCommand('copy');
-            showToast('📋 已複製統整單到剪貼簿！');
-        } catch (err) {
-            showToast('❌ 複製失敗，請手動選擇複製');
-        }
-        document.body.removeChild(textarea);
+    function getGasUrl() {
+        return localStorage.getItem('GAS_WEB_APP_URL') || DEFAULT_GAS_URL;
     }
 
     function syncToGoogleSheet() {
-        const gasUrl = localStorage.getItem('GAS_WEB_APP_URL');
+        const gasUrl = getGasUrl();
         if (!gasUrl) {
             showToast('⚠️ 請先點擊右上角「設定 API」輸入 Web App URL');
             openSettings();
@@ -507,7 +468,7 @@
     }
 
     function openSettings() {
-        document.getElementById('gasUrlInput').value = localStorage.getItem('GAS_WEB_APP_URL') || '';
+        document.getElementById('gasUrlInput').value = getGasUrl();
         document.getElementById('settingsModal').classList.remove('hidden');
     }
 
@@ -522,7 +483,7 @@
             showToast('✅ API 網址已成功儲存');
         } else {
             localStorage.removeItem('GAS_WEB_APP_URL');
-            showToast('ℹ️ 已清除 API 網址');
+            showToast('ℹ️ 已恢復為預設 API 網址');
         }
         closeSettings();
     }
@@ -547,5 +508,7 @@
         updateBadge();
     };
 </script>
+</body>
+</html>
 </body>
 </html>
