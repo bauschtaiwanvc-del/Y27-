@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>隱形眼鏡試戴訂貨系統</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+        .tab-btn.active { border-bottom: 3px solid #2563eb; color: #2563eb; font-weight: bold; background-color: #eff6ff; }
+        /* Custom scrollbar for mobile overflow */
+        ::-webkit-scrollbar { height: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800 pb-12">
+
+<div class="max-w-md md:max-w-xl mx-auto px-4 py-6">
+
+    <!-- 標題與 ECP 資訊卡片 -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 mb-5">
+        <div class="flex items-center justify-between mb-4">
+            <h1 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                <i class="fa-solid font-bold text-blue-600 fa-boxes-packing"></i> 試戴片訂貨系統
+            </h1>
+            <button onclick="openSettings()" class="text-slate-400 hover:text-slate-600 text-sm flex items-center gap-1 bg-slate-100 px-2.5 py-1.5 rounded-lg">
+                <i class="fa-solid fa-gear"></i> 設定 API
+            </button>
+        </div>
+
+        <div class="space-y-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+            <div>
+                <label class="block text-xs font-semibold text-slate-500 mb-1">姓名 <span class="text-rose-500">*</span></label>
+                <input type="text" id="ecpName" placeholder="請輸入姓名" class="w-full text-sm bg-white p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-500 mb-1">店名 <span class="text-rose-500">*</span></label>
+                <input type="text" id="contactPerson" placeholder="請輸入店家或診所名稱" class="w-full text-sm bg-white p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            </div>
+        </div>
+    </div>
+
+    <!-- 分頁導覽列 -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-2 mb-5">
+        <div class="flex border-b border-slate-100 overflow-x-auto text-sm">
+            <button class="tab-btn flex-1 min-w-[80px] py-2.5 px-3 rounded-lg text-center transition-all active" onclick="switchTab('clear')">
+                💧 透明日拋
+            </button>
+            <button class="tab-btn flex-1 min-w-[80px] py-2.5 px-3 rounded-lg text-center transition-all" onclick="switchTab('toricMulti')">
+                👓 散光/老花
+            </button>
+            <button class="tab-btn flex-1 min-w-[80px] py-2.5 px-3 rounded-lg text-center transition-all" onclick="switchTab('colorDay')">
+                ✨ 彩色日拋
+            </button>
+            <button class="tab-btn flex-1 min-w-[80px] py-2.5 px-3 rounded-lg text-center transition-all" onclick="switchTab('colorMonth')">
+                🌙 彩色月拋
+            </button>
+        </div>
+
+        <!-- 下單輸入面板 -->
+        <div id="order-panel" class="p-3">
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">品項名稱</label>
+                    <select id="prodSelect" class="w-full text-base bg-white p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none font-medium text-slate-700"></select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">度數</label>
+                    <select id="degSelect" class="w-full text-base bg-white p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none font-bold text-blue-700"></select>
+                    <input type="text" id="degInput" placeholder="請手動輸入度數 (例如: -2.00/-1.25x180 或 High ADD)" class="w-full text-base bg-white p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none font-bold text-blue-700 hidden">
+                </div>
+
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="block text-xs font-bold text-slate-600">數量</label>
+                        <span id="unit-label-tip" class="text-xs text-blue-600 font-semibold">(須為2的倍數/片)</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button type="button" onclick="adjustQty(-1)" class="w-12 h-12 bg-slate-100 border border-slate-300 rounded-xl font-bold text-xl text-slate-700 hover:bg-slate-200 active:scale-95 transition-all flex items-center justify-center">-</button>
+                        <input type="number" id="qtyInput" class="flex-1 text-center font-bold text-lg p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none" value="2" min="1">
+                        <button type="button" onclick="adjustQty(1)" class="w-12 h-12 bg-slate-100 border border-slate-300 rounded-xl font-bold text-xl text-slate-700 hover:bg-slate-200 active:scale-95 transition-all flex items-center justify-center">+</button>
+                    </div>
+                </div>
+
+                <button onclick="addOrder()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-500/30 active:scale-[0.98] transition-all flex items-center justify-center gap-2 text-base">
+                    <i class="fa-solid fa-plus"></i> 加入訂單
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 即時加入紀錄區塊 -->
+    <div id="live-section" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 mb-5">
+        <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+            <i class="fa-solid fa-clock-rotate-left"></i> 最近新增紀錄 (最新 5 筆)
+        </h2>
+        <div id="liveLogList" class="space-y-2">
+            <p class="text-xs text-slate-400 text-center py-2">尚無新增紀錄</p>
+        </div>
+    </div>
+
+    <!-- 彙整總表面板 (置於最下方) -->
+    <div id="summary-panel" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
+        <h3 class="font-bold text-slate-800 text-base mb-3 flex items-center justify-between">
+            <span class="flex items-center gap-2">
+                📋 最終訂貨彙整總表 
+                <span id="badge-count" class="bg-blue-600 text-white text-xs px-2 py-0.5 rounded-full font-bold">0</span>
+            </span>
+            <span class="text-xs font-normal text-slate-500">自動分組與分類排序</span>
+        </h3>
+
+        <div id="final-table-container" class="overflow-hidden border border-slate-200 rounded-xl bg-white mb-4">
+            <table class="w-full text-sm text-left">
+                <thead class="bg-slate-800 text-white text-xs uppercase">
+                    <tr>
+                        <th class="px-3 py-2.5">度數</th>
+                        <th class="px-3 py-2.5 text-center">數量</th>
+                        <th class="px-3 py-2.5 text-right">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="finalTbody" class="divide-y divide-slate-100">
+                    <!-- 動態渲染彙整資料 -->
+                </tbody>
+            </table>
+        </div>
+
+        <div class="space-y-2">
+            <button onclick="copyFormattedText()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 shadow-sm">
+                <i class="fa-regular fa-copy"></i> 複製文字清單 (適合 LINE/貼上)
+            </button>
+            <div class="flex gap-2">
+                <button onclick="clearAllOrders()" class="flex-1 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 font-bold py-2.5 rounded-xl text-sm flex items-center justify-center gap-1">
+                    <i class="fa-solid fa-trash-can"></i> 清空重來
+                </button>
+                <button onclick="syncToGoogleSheet()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl text-sm flex items-center justify-center gap-1 shadow-md shadow-blue-500/20">
+                    <i class="fa-solid fa-cloud-arrow-up"></i> 同步至雲端
+                </button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- 設定 Modal -->
+<div id="settingsModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl p-5 max-w-sm w-full shadow-2xl border border-slate-100">
+        <h3 class="text-base font-bold text-slate-800 mb-2 flex items-center gap-2">
+            <i class="fa-solid fa-link text-blue-600"></i> Google Sheet API 網址設定
+        </h3>
+        <p class="text-xs text-slate-500 mb-4">請將您在 Google Apps Script 部署獲得的 Web App URL 貼至下方：</p>
+        <input type="url" id="gasUrlInput" value="https://script.google.com/macros/s/AKfycbzAJ289K75oI9gtQxCBRBcfwMwZhgxhOnDgtKNCXWeJRLf7DRhedGh2gvsN…"w-full text-xs p-3 border border-slate-300 rounded-xl mb-4 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        <div class="flex gap-2">
+            <button onclick="closeSettings()" class="flex-1 bg-slate-100 text-slate-600 font-bold py-2 rounded-xl text-xs">取消</button>
+            <button onclick="saveSettings()" class="flex-1 bg-blue-600 text-white font-bold py-2 rounded-xl text-xs">儲存網址</button>
+        </div>
+    </div>
+</div>
+
+<!-- 自訂訊息提示 Modal (替代 Alert) -->
+<div id="toastModal" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-800 text-white px-5 py-3 rounded-full shadow-xl text-sm font-medium flex items-center gap-2 transition-all duration-300 opacity-0 pointer-events-none transform translate-y-4">
+    <span id="toastIcon">ℹ️</span>
+    <span id="toastMsg">訊息內容</span>
+</div>
+
+<script>
+    // 品項定義
+    const items = {
+        clear: ["奧澈日拋", "舒視能日拋"],
+        toricMulti: ["舒視能散光", "舒視能老花", "奧澈老花", "散光老花"],
+        colorDay: ["炫眸金", "炫眸灰", "奇幻午夜", "晨曦褐", "炫眸咖", "星彩遊行", "暖陽橘", "迷眸棕", "閃爍樂園", "日暮棕", "迷眸灰", "暮光可可", "暮夜紫"],
+        colorMonth: ["夢遊仙境", "旋轉咖啡", "月光漫舞", "星願煙火", "焦糖棕", "巧酥灰", "夢幻銀河", "夜幕遊行", "甜橙棕", "松露灰", "薰衣草", "野莓粉", "薄荷藍"]
+    };
+
+    const typeNames = {
+        clear: "【透明日拋】",
+        toricMulti: "【散光/老花】",
+        colorDay: "【彩色日拋】",
+        colorMonth: "【彩色月拋】"
+    };
+
+    const typeOrder = ['clear', 'toricMulti', 'colorDay', 'colorMonth'];
+
+    let currentTab = 'clear';
+    let orders = [];
+    let liveLog = [];
+
+    /**
+     * 動態生成度數陣列
+     * 透明片: -0.50, -1.00~-6.00 (每0.25一跳), -6.50~-10.00 (每0.50一跳)
+     * 彩色片:  0.00, -1.00~-6.00 (每0.25一跳), -6.50~-10.00 (每0.50一跳)
+     */
+    function genDegrees(type) {
+        let degrees = [];
+        if (type === 'clear') {
+            degrees.push('-0.50');
+        } else {
+            degrees.push('0.00');
+        }
+        
+        // -1.00 至 -6.00 (每 0.25 一跳)
+        for (let d = 1.0; d <= 6.0; d += 0.25) {
+            degrees.push(`-${d.toFixed(2)}`);
+        }
+        
+        // -6.50 至 -10.00 (每 0.50 一跳)
+        for (let d = 6.5; d <= 10.0; d += 0.50) {
+            degrees.push(`-${d.toFixed(2)}`);
+        }
+        
+        return degrees;
+    }
+
+    function switchTab(tab) {
+        currentTab = tab;
+        
+        // 更新 Tab 樣式
+        const tabs = ['clear', 'toricMulti', 'colorDay', 'colorMonth'];
+        document.querySelectorAll('.tab-btn').forEach((btn, idx) => {
+            btn.classList.toggle('active', tabs[idx] === tab);
+        });
+
+        renderFormOptions();
+    }
+
+    function renderFormOptions() {
+        const prodSelect = document.getElementById('prodSelect');
+        const degSelect = document.getElementById('degSelect');
+        const degInput = document.getElementById('degInput');
+        const qtyInput = document.getElementById('qtyInput');
+        const unitTip = document.getElementById('unit-label-tip');
+
+        // 渲染品項
+        prodSelect.innerHTML = items[currentTab].map(prod => `<option value="${prod}">${prod}</option>`).join('');
+
+        // 渲染/切換度數輸入（散光老花使用文字輸入框）
+        if (currentTab === 'toricMulti') {
+            degSelect.classList.add('hidden');
+            degInput.classList.remove('hidden');
+        } else {
+            degSelect.classList.remove('hidden');
+            degInput.classList.add('hidden');
+            const degList = genDegrees(currentTab);
+            degSelect.innerHTML = degList.map(deg => `<option value="${deg}">${deg}</option>`).join('');
+        }
+
+        // 預設數量與提示（透明日拋與散光老花皆為 2 的倍數/片）
+        if (currentTab === 'clear' || currentTab === 'toricMulti') {
+            qtyInput.value = 2;
+            qtyInput.min = 2;
+            qtyInput.step = 2;
+            unitTip.textContent = "(須為 2 的倍數/片)";
+        } else {
+            qtyInput.value = 1;
+            qtyInput.min = 1;
+            qtyInput.step = 1;
+            unitTip.textContent = "(盒)";
+        }
+    }
+
+    function adjustQty(delta) {
+        const qtyInput = document.getElementById('qtyInput');
+        let currentVal = parseInt(qtyInput.value) || 0;
+        let isPieceUnit = (currentTab === 'clear' || currentTab === 'toricMulti');
+        let step = isPieceUnit ? 2 : 1;
+        let minVal = isPieceUnit ? 2 : 1;
+        let newVal = currentVal + (delta * step);
+        
+        if (newVal >= minVal) {
+            qtyInput.value = newVal;
+        }
+    }
+
+    function addOrder() {
+        const prod = document.getElementById('prodSelect').value;
+        const deg = currentTab === 'toricMulti' 
+            ? document.getElementById('degInput').value.trim() 
+            : document.getElementById('degSelect').value;
+        let qty = parseInt(document.getElementById('qtyInput').value) || 0;
+
+        if (!deg) {
+            showToast('⚠️ 請填寫度數內容！');
+            return;
+        }
+
+        const isPieceUnit = (currentTab === 'clear' || currentTab === 'toricMulti');
+
+        if (isPieceUnit && qty % 2 !== 0) {
+            showToast('⚠️ 片數須為 2 的倍數！');
+            return;
+        }
+
+        if (qty <= 0) {
+            showToast('⚠️ 請輸入有效的數量');
+            return;
+        }
+
+        const unit = isPieceUnit ? '片' : '盒';
+        const key = `${currentTab}-${prod}-${deg}`;
+
+        // 檢查是否已存在，合併數量
+        const existing = orders.find(item => item.key === key);
+        if (existing) {
+            existing.qty += qty;
+        } else {
+            orders.push({
+                key: key,
+                typeKey: currentTab,
+                typeName: typeNames[currentTab],
+                prod: prod,
+                deg: deg,
+                qty: qty,
+                unit: unit
+            });
+        }
+
+        // 更新即時 Log 與總表
+        liveLog.unshift({ prod, deg, qty, unit });
+        if (liveLog.length > 5) liveLog.pop();
+
+        updateLiveLogDisplay();
+        renderFinalTable();
+        updateBadge();
+        showToast(`✅ 已加入：${prod} (${deg}) x ${qty} ${unit}`);
+    }
+
+    function updateBadge() {
+        document.getElementById('badge-count').textContent = orders.length;
+    }
+
+    function updateLiveLogDisplay() {
+        const container = document.getElementById('liveLogList');
+        if (liveLog.length === 0) {
+            container.innerHTML = '<p class="text-xs text-slate-400 text-center py-2">尚無新增紀錄</p>';
+            return;
+        }
+
+        container.innerHTML = liveLog.map(item => `
+            <div class="flex justify-between items-center bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs">
+                <span class="font-medium text-slate-700">${item.prod} <span class="font-bold text-blue-600">${item.deg}</span></span>
+                <span class="font-bold bg-blue-100 text-blue-800 px-2 py-0.5 rounded-md">${item.qty} ${item.unit}</span>
+            </div>
+        `).join('');
+    }
+
+    function renderFinalTable() {
+        const tbody = document.getElementById('finalTbody');
+        tbody.innerHTML = '';
+
+        if (orders.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" class="text-center py-6 text-slate-400 text-xs">目前訂單為空，請先加入品項</td></tr>';
+            return;
+        }
+
+        // 排序 logic: 類別 -> 品項 -> 度數
+        let sortedData = [...orders].sort((a, b) => {
+            if (a.typeKey !== b.typeKey) return typeOrder.indexOf(a.typeKey) - typeOrder.indexOf(b.typeKey);
+            if (a.prod !== b.prod) return a.prod.localeCompare(b.prod, 'zh-Hant');
+            return (parseFloat(a.deg) || 0) - (parseFloat(b.deg) || 0);
+        });
+
+        let currentType = "";
+        let currentProd = "";
+
+        sortedData.forEach((item) => {
+            // 類別標題列
+            if (item.typeKey !== currentType) {
+                const tr = tbody.insertRow();
+                tr.innerHTML = `<td colspan="3" class="bg-blue-50 font-bold text-blue-900 px-3 py-2 text-xs border-y border-blue-100">${item.typeName}</td>`;
+                currentType = item.typeKey;
+                currentProd = "";
+            }
+            // 品項標題列
+            if (item.prod !== currentProd) {
+                const tr = tbody.insertRow();
+                tr.innerHTML = `<td colspan="3" class="bg-slate-50 font-semibold text-slate-700 px-4 py-1.5 text-xs border-b border-slate-100">└ 品項：${item.prod}</td>`;
+                currentProd = item.prod;
+            }
+
+            // 數據列
+            const row = tbody.insertRow();
+            row.className = "hover:bg-slate-50 transition-colors";
+            row.innerHTML = `
+                <td class="px-3 py-2 text-slate-800 font-bold pl-8 text-xs">${item.deg}</td>
+                <td class="px-3 py-2 text-center text-xs"><span class="font-bold text-blue-700">${item.qty}</span> ${item.unit}</td>
+                <td class="px-3 py-2 text-right">
+                    <button onclick="deleteItem('${item.key}')" class="text-rose-500 hover:text-rose-700 text-xs font-semibold px-2 py-1">刪除</button>
+                </td>
+            `;
+        });
+    }
+
+    function deleteItem(key) {
+        orders = orders.filter(i => i.key !== key);
+        renderFinalTable();
+        updateBadge();
+        showToast('已刪除該項品項');
+    }
+
+    function clearAllOrders() {
+        if (orders.length === 0) return;
+        orders = [];
+        liveLog = [];
+        updateLiveLogDisplay();
+        renderFinalTable();
+        updateBadge();
+        showToast('已清空所有訂單');
+    }
+
+    function copyFormattedText() {
+        if (orders.length === 0) {
+            showToast('⚠️ 目前清單是空的');
+            return;
+        }
+
+        const ecp = document.getElementById('ecpName').value.trim();
+        const contact = document.getElementById('contactPerson').value.trim();
+
+        if (!ecp || !contact) {
+            showToast('⚠️ 請完整填寫姓名與店名');
+            return;
+        }
+
+        let text = `【隱形眼鏡試戴訂貨單】\n`;
+        text += `姓名：${ecp}\n`;
+        text += `店名：${contact}\n`;
+        text += `------------------------\n`;
+
+        let sortedData = [...orders].sort((a, b) => {
+            if (a.typeKey !== b.typeKey) return typeOrder.indexOf(a.typeKey) - typeOrder.indexOf(b.typeKey);
+            if (a.prod !== b.prod) return a.prod.localeCompare(b.prod, 'zh-Hant');
+            return (parseFloat(a.deg) || 0) - (parseFloat(b.deg) || 0);
+        });
+
+        let lastType = "", lastProd = "";
+        sortedData.forEach(i => {
+            if (i.typeKey !== lastType) {
+                text += `\n${i.typeName}\n`;
+                lastType = i.typeKey;
+            }
+            if (i.prod !== lastProd) {
+                text += `● 品項：${i.prod}\n`;
+                lastProd = i.prod;
+            }
+            text += `  度數：${i.deg} → ${i.qty} ${i.unit}\n`;
+        });
+
+        // 複製至剪貼簿 (使用相容 fallback)
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        textarea.select();
+        try {
+            document.execCommand('copy');
+            showToast('📋 已複製統整單到剪貼簿！');
+        } catch (err) {
+            showToast('❌ 複製失敗，請手動選擇複製');
+        }
+        document.body.removeChild(textarea);
+    }
+
+    function syncToGoogleSheet() {
+        const gasUrl = localStorage.getItem('GAS_WEB_APP_URL');
+        if (!gasUrl) {
+            showToast('⚠️ 請先點擊右上角「設定 API」輸入 Web App URL');
+            openSettings();
+            return;
+        }
+
+        const ecpName = document.getElementById('ecpName').value.trim();
+        const contactPerson = document.getElementById('contactPerson').value.trim();
+
+        if (!ecpName || !contactPerson) {
+            showToast('⚠️ 請完整填寫姓名與店名');
+            return;
+        }
+
+        if (orders.length === 0) {
+            showToast('⚠️ 訂單清單為空，無法同步');
+            return;
+        }
+
+        showToast('⏳ 傳送資料中...');
+
+        const payload = {
+            ecpName: ecpName,
+            contactPerson: contactPerson,
+            orders: orders
+        };
+
+        fetch(gasUrl, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(() => {
+            showToast('🎉 資料已成功同步至 Google Sheet！');
+        })
+        .catch(err => {
+            console.error(err);
+            showToast('❌ 傳送失敗，請檢查 API 網址與網路設定');
+        });
+    }
+
+    function openSettings() {
+        document.getElementById('gasUrlInput').value = localStorage.getItem('GAS_WEB_APP_URL') || '';
+        document.getElementById('settingsModal').classList.remove('hidden');
+    }
+
+    function closeSettings() {
+        document.getElementById('settingsModal').classList.add('hidden');
+    }
+
+    function saveSettings() {
+        const url = document.getElementById('gasUrlInput').value.trim();
+        if (url) {
+            localStorage.setItem('GAS_WEB_APP_URL', url);
+            showToast('✅ API 網址已成功儲存');
+        } else {
+            localStorage.removeItem('GAS_WEB_APP_URL');
+            showToast('ℹ️ 已清除 API 網址');
+        }
+        closeSettings();
+    }
+
+    function showToast(msg) {
+        const toast = document.getElementById('toastModal');
+        const toastMsg = document.getElementById('toastMsg');
+        toastMsg.textContent = msg;
+
+        toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+        toast.classList.add('opacity-100', 'translate-y-0');
+
+        setTimeout(() => {
+            toast.classList.remove('opacity-100', 'translate-y-0');
+            toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+        }, 2500);
+    }
+
+    window.onload = function() {
+        renderFormOptions();
+        renderFinalTable();
+        updateBadge();
+    };
+</script>
+</body>
+</html>
