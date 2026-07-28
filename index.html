@@ -419,6 +419,51 @@
             return;
         }
 
+        const ecpName = document.getElementById('ecpName').value.trim();
+        const contactPerson = document.getElementById('contactPerson').value.trim();
+
+        let text = `【試戴片訂貨清單】\n`;
+        if (ecpName) text += `姓名：${ecpName}\n`;
+        if (contactPerson) text += `店名：${contactPerson}\n`;
+        text += `------------------------\n`;
+
+        let sortedData = [...orders].sort((a, b) => {
+            if (a.typeKey !== b.typeKey) return typeOrder.indexOf(a.typeKey) - typeOrder.indexOf(b.typeKey);
+            if (a.prod !== b.prod) return a.prod.localeCompare(b.prod, 'zh-Hant');
+            return (parseFloat(a.deg) || 0) - (parseFloat(b.deg) || 0);
+        });
+
+        let currentType = "";
+        let currentProd = "";
+
+        sortedData.forEach((item) => {
+            if (item.typeKey !== currentType) {
+                text += `\n${item.typeName}\n`;
+                currentType = item.typeKey;
+                currentProd = "";
+            }
+            if (item.prod !== currentProd) {
+                text += `  • ${item.prod}：\n`;
+                currentProd = item.prod;
+            }
+            text += `    - 度數 ${item.deg}：${item.qty} ${item.unit}\n`;
+        });
+
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        try {
+            document.execCommand('copy');
+            showToast('📋 已複製訂單文字清單！');
+        } catch (err) {
+            showToast('❌ 複製失敗，請再試一次');
+        }
+        document.body.removeChild(textarea);
+    }
+
     function getGasUrl() {
         return localStorage.getItem('GAS_WEB_APP_URL') || DEFAULT_GAS_URL;
     }
@@ -508,7 +553,5 @@
         updateBadge();
     };
 </script>
-</body>
-</html>
 </body>
 </html>
